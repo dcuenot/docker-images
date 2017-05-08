@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -x
 set -m
 
@@ -7,24 +6,41 @@ set -m
 
 sleep 15
 
-# Setup index and memory quota
-curl -v -X POST http://127.0.0.1:8091/pools/default -d memoryQuota=300 -d indexMemoryQuota=300
+# Default values
+if [ ! -z $ADMIN_LOGIN ]
+then
+  ADMIN_LOGIN="Administrator"
+fi
 
-# Setup services
-curl -v http://127.0.0.1:8091/node/controller/setupServices -d services=kv%2Cn1ql%2Cindex
+if [ ! -z $ADMIN_PWD ]
+then
+  ADMIN_PWD="password"
+fi
 
-# Setup credentials
-curl -v http://127.0.0.1:8091/settings/web -d port=8091 -d username=Administrator -d password=password
+if [ ! -z $RAM_SIZE ]
+then
+  ADMIN_PWD="300"
+fi
 
-# Setup Memory Optimized Indexes
-curl -i -u Administrator:password -X POST http://127.0.0.1:8091/settings/indexes -d 'storageMode=memory_optimized'
+if [ ! -z $NODE_TYPE ]
+then
+  NODE_TYPE="MASTER"
+fi
+# End default values
+
+# Creation of the first node
+couchbase-cli cluster-init -c localhost:8091 --cluster-username=$ADMIN_LOGIN --cluster-password=$ADMIN_PWD --cluster-port=8091 --services=data,index,query,fts --cluster-ramsize=$RAM_SIZE --cluster-index-ramsize=$RAM_SIZE --cluster-fts-ramsize=$RAM_SIZE --index-storage-setting=memopt
 
 # Load travel-sample bucket
 #curl -v -u Administrator:password -X POST http://127.0.0.1:8091/sampleBuckets/install -d '["travel-sample"]'
 
-echo "Type: $TYPE"
 
-if [ "$TYPE" = "WORKER" ]; then
+#wget https://ressources.data.sncf.com/explore/dataset/regularite-mensuelle-tgv/download/?format=json\&timezone=Europe\/Berlin -O jdd.json
+
+# Additionnal actions for a cluster
+echo "Type: $NODE_TYPE"
+
+if [ "$NODE_TYPE" = "WORKER" ]; then
   echo "Sleeping ..."
   sleep 15
 
@@ -34,13 +50,10 @@ if [ "$TYPE" = "WORKER" ]; then
 
   echo "Auto Rebalance: $AUTO_REBALANCE"
   if [ "$AUTO_REBALANCE" = "true" ]; then
-    couchbase-cli rebalance --cluster=$COUCHBASE_MASTER:8091 --user=Administrator --password=password --server-add=$IP --server-add-username=Administrator --server-add-password=password
+    couchbase-cli rebalance --cluster=$COUCHBASE_MASTER:8091 --user=$ADMIN_LOGIN --password=$ADMIN_PWD --server-add=$IP --server-add-username=$ADMIN_LOGIN --server-add-password=$ADMIN_PWD
   else
-    couchbase-cli server-add --cluster=$COUCHBASE_MASTER:8091 --user=Administrator --password=password --server-add=$IP --server-add-username=Administrator --server-add-password=password
+    couchbase-cli server-add --cluster=$COUCHBASE_MASTER:8091 --user=$ADMIN_LOGIN --password=$ADMIN_PWD --server-add=$IP --server-add-username=$ADMIN_LOGIN --server-add-password=$ADMIN_PWD
   fi;
 fi;
 
 fg 1
-
-
-#wget https://ressources.data.sncf.com/explore/dataset/regularite-mensuelle-tgv/download/?format=json\&timezone=Europe\/Berlin -O jdd.json
