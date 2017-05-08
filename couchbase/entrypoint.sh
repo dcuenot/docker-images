@@ -7,34 +7,40 @@ set -m
 sleep 15
 
 # Default values
-if [ ! -z $ADMIN_LOGIN ]
+if [ -z "$ADMIN_LOGIN" ]
 then
   ADMIN_LOGIN="Administrator"
 fi
 
-if [ ! -z $ADMIN_PWD ]
+if [ -z "$ADMIN_PWD" ]
 then
   ADMIN_PWD="password"
 fi
 
-if [ ! -z $RAM_SIZE ]
+if [ -z "$RAM_SIZE" ]
 then
-  ADMIN_PWD="300"
+  RAM_SIZE="300"
 fi
 
-if [ ! -z $NODE_TYPE ]
+if [ -z "$BUCKET_NAME" ]
+then
+  BUCKET_NAME="bucket"
+fi
+
+if [ -z "$NODE_TYPE" ]
 then
   NODE_TYPE="MASTER"
 fi
 # End default values
 
-# Creation of the first node
+# First node creation
 couchbase-cli cluster-init -c localhost:8091 --cluster-username=$ADMIN_LOGIN --cluster-password=$ADMIN_PWD --cluster-port=8091 --services=data,index,query,fts --cluster-ramsize=$RAM_SIZE --cluster-index-ramsize=$RAM_SIZE --cluster-fts-ramsize=$RAM_SIZE --index-storage-setting=memopt
 
-# Load travel-sample bucket
+# Bucket creation
+couchbase-cli bucket-create -c localhost:8091 --bucket=$BUCKET_NAME --bucket-type=couchbase --bucket-ramsize=$RAM_SIZE --bucket-replica=1 --bucket-priority=high --wait -u $ADMIN_LOGIN -p $ADMIN_PWD  
+
+# Add samples
 #curl -v -u Administrator:password -X POST http://127.0.0.1:8091/sampleBuckets/install -d '["travel-sample"]'
-
-
 #wget https://ressources.data.sncf.com/explore/dataset/regularite-mensuelle-tgv/download/?format=json\&timezone=Europe\/Berlin -O jdd.json
 
 # Additionnal actions for a cluster
